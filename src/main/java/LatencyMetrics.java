@@ -9,11 +9,16 @@ import java.time.Instant;
 public class LatencyMetrics {
 
     private Instant start;
+    private String event;
     private int count;
     private long total;
     private long max;
     private long min = Integer.MAX_VALUE;
     private long mean;
+
+    public LatencyMetrics(String event){
+        this.event = event;
+    }
 
     public void start(){
         /*
@@ -46,9 +51,50 @@ public class LatencyMetrics {
         --count;
     }
 
+    public String getEvent() {
+        return event;
+    }
+
+    public void setEvent(String event) {
+        this.event = event;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public long getMax() {
+        return max;
+    }
+
+    public void setMax(long max) {
+        this.max = max;
+    }
+
+    public long getMin() {
+        return min;
+    }
+
+    public void setMin(long min) {
+        this.min = min;
+    }
+
+    public long getMean() {
+        return mean;
+    }
+
+    public void setMean(long mean) {
+        this.mean = mean;
+    }
+
     @Override
     public String toString() {
         return "LatencyMetrics{" +
+                "event=" + event +
                 "count=" + count +
                 ", max=" + max +
                 ", min=" + min +
