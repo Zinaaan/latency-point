@@ -1,6 +1,3 @@
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Arrays;
 
 /**
@@ -10,10 +7,9 @@ import java.util.Arrays;
  */
 public class LatencyPoint {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LatencyPoint.class);
     /**
-     * Two challenges for using primitive array:
-     * 1. Thread-safe
+     * Two challenges for using object array:
+     * 1. Thread-safe guaranteed
      * 2. Proper initial capacity
      */
     private static LatencyMetrics[] VALUES = new LatencyMetrics[0];
@@ -21,28 +17,29 @@ public class LatencyPoint {
     private final int id;
 
     public LatencyPoint(String event) {
-         synchronized (VALUE_LOCK){
-             int newId = VALUES.length;
-             VALUES = Arrays.copyOf(VALUES, newId + 1);
-             VALUES[newId] = new LatencyMetrics(event);
-             this.id = newId;
-         }
+        synchronized (VALUE_LOCK) {
+            final LatencyMetrics[] current = VALUES;
+            final int newId = current.length;
+            LatencyMetrics[] copy = Arrays.copyOf(VALUES, newId + 1);
+            copy[newId] = new LatencyMetrics(event);
+            VALUES = copy;
+            id = newId;
+        }
     }
 
-    public void start(){
+    public void start() {
         VALUES[id].start();
     }
 
-    public void stop(){
+    public void stop() {
         VALUES[id].compute();
     }
 
-    public LatencyMetrics getMetrics(){
-//        LOG.info("Thread: {}, id: {}, length: {}", Thread.currentThread().getName(), id, VALUES.length);
+    public LatencyMetrics getMetrics() {
         return VALUES[id];
     }
 
-    public static LatencyMetrics[] getValues(){
+    public static LatencyMetrics[] getValues() {
         return VALUES;
     }
 
@@ -50,7 +47,7 @@ public class LatencyPoint {
         return id;
     }
 
-    public static LatencyPoint init(String event){
+    public static LatencyPoint init(String event) {
         return new LatencyPoint(event);
     }
 }
