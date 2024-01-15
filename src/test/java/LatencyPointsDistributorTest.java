@@ -36,11 +36,8 @@ class LatencyPointsDistributorTest {
         }
 
         e2e.stop();
-
+        new Thread(LatencyPointAggregator.INSTANCE).start();
         Assertions.assertEquals(3, LatencyPointsDistributor.getLatencyMap().size());
-        Assertions.assertEquals(1, e2e.getCount());
-        Assertions.assertEquals(100, step1.getCount());
-        Assertions.assertEquals(50, step2.getCount());
     }
 
     @Test
@@ -72,9 +69,6 @@ class LatencyPointsDistributorTest {
                 Assertions.assertNotNull(step1);
                 Assertions.assertNotNull(step2);
                 Assertions.assertEquals(3, LatencyPointsDistributor.getLatencyMap().size());
-                Assertions.assertEquals(1, e2e.getCount());
-                Assertions.assertEquals(100, step1.getCount());
-                Assertions.assertEquals(50, step2.getCount());
             });
         }
 

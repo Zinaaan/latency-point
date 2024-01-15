@@ -10,30 +10,38 @@ import java.util.Optional;
  */
 public class LatencyPointsDistributor {
 
+    private static final Map<String, Map<String, LatencyPoint>> GLOBAL_LATENCY_POINT_MAP = new Object2ObjectHashMap<>();
     private static final ThreadLocal<Object2ObjectHashMap<String, LatencyPoint>> POINTS = ThreadLocal.withInitial(Object2ObjectHashMap::new);
 
-    public static LatencyPoint latencyPoint(String event){
-        return getOrInstantiate(event, PointType.LATENCY);
+    public static LatencyPoint latencyPoint(String blockName){
+        return getOrInstantiate(blockName, PointType.LATENCY);
     }
 
-    public static LatencyPoint countPoint(String event){
-        return getOrInstantiate(event, PointType.COUNT);
+    public static LatencyPoint countPoint(String blockName){
+        return getOrInstantiate(blockName, PointType.COUNT);
     }
 
-    public static LatencyPoint gaugePoint(String event){
-        return getOrInstantiate(event, PointType.GAUGE);
+    public static LatencyPoint gaugePoint(String blockName){
+        return getOrInstantiate(blockName, PointType.GAUGE);
     }
 
-    private static LatencyPoint getOrInstantiate(String event, PointType type){
+    private static LatencyPoint getOrInstantiate(String blockName, PointType type){
         Map<String, LatencyPoint> pointMap = POINTS.get();
-        return Optional.ofNullable(pointMap.get(event)).orElseGet(() -> {
-            LatencyPoint point = new LatencyPoint(event, type);
-            pointMap.put(event, point);
+        return Optional.ofNullable(pointMap.get(blockName)).orElseGet(() -> {
+            LatencyPoint point = new LatencyPoint(blockName, type);
+            pointMap.put(blockName, point);
+            String threadName = Thread.currentThread().getName();
+            GLOBAL_LATENCY_POINT_MAP.put(threadName, pointMap);
+            LatencyPointAggregator.INSTANCE.addClientInfo(threadName, blockName, type);
             return point;
         });
     }
 
     public static Map<String, LatencyPoint> getLatencyMap(){
         return POINTS.get();
+    }
+
+    public static Map<String, Map<String, LatencyPoint>> getGlobalLatencyPointMap(){
+        return GLOBAL_LATENCY_POINT_MAP;
     }
 }

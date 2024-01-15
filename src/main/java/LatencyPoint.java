@@ -1,3 +1,5 @@
+import net.openhft.chronicle.bytes.Bytes;
+
 import java.time.Duration;
 import java.time.Instant;
 
@@ -9,17 +11,19 @@ import java.time.Instant;
 public class LatencyPoint {
 
     private Instant start;
-    private String event;
+    private String blockName;
     private PointType type;
     private int count;
     private long total;
     private long max;
     private long min = Integer.MAX_VALUE;
     private long mean;
+    private final Bytes<byte[]> metricBytes;
 
-    public LatencyPoint(String event, PointType type){
-        this.event = event;
+    public LatencyPoint(String blockName, PointType type){
+        this.blockName = blockName;
         this.type = type;
+        metricBytes = Bytes.allocateElasticOnHeap(40);
     }
 
     public void start(){
@@ -31,18 +35,37 @@ public class LatencyPoint {
     }
 
     public void stop(){
-        compute();
+        LatencyPointAggregator.INSTANCE.collect(collectMetrics(Duration.between(start, Instant.now()).getNano()));
     }
 
-    public void compute(){
-        compute(Duration.between(start, Instant.now()).getNano());
+    private byte[] collectMetrics(long latency){
+        return metricBytes.clear().writeUtf8(Thread.currentThread().getName()).writeUtf8(blockName).writeInt(type.ordinal()).writeLong(latency).toByteArray();
     }
 
-    public void compute(long elapsedTime){
+    public LatencyPoint compute(long elapsedTime){
         max = Math.max(max, elapsedTime);
         min = Math.max(min, elapsedTime);
         total += elapsedTime;
         mean = total / ++count;
+        return this;
+    }
+
+    public void copyFor(LatencyPoint target){
+        target.blockName = blockName;
+        target.type = type;
+        target.max = max;
+        target.min = min;
+        target.mean = mean;
+        target.count = count;
+    }
+
+    public void clear(){
+        blockName = null;
+        type = null;
+        max = 0L;
+        min = 0L;
+        mean = 0L;
+        count = 0;
     }
 
     public void increment(){
@@ -53,60 +76,12 @@ public class LatencyPoint {
         --count;
     }
 
-    public String getEvent() {
-        return event;
-    }
-
-    public void setEvent(String event) {
-        this.event = event;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
-    public PointType getType() {
-        return type;
-    }
-
-    public void setType(PointType type) {
-        this.type = type;
-    }
-
-    public void setCount(int count) {
-        this.count = count;
-    }
-
-    public long getMax() {
-        return max;
-    }
-
-    public void setMax(long max) {
-        this.max = max;
-    }
-
-    public long getMin() {
-        return min;
-    }
-
-    public void setMin(long min) {
-        this.min = min;
-    }
-
-    public long getMean() {
-        return mean;
-    }
-
-    public void setMean(long mean) {
-        this.mean = mean;
-    }
-
     @Override
     public String toString() {
         return "LatencyPoint{" +
-                "event=" + event +
-                "type=" + type +
-                "count=" + count +
+                "event=" + blockName +
+                ", type=" + type +
+                ", count=" + count +
                 ", max=" + max +
                 ", min=" + min +
                 ", mean=" + mean +
