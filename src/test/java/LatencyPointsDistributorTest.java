@@ -1,3 +1,6 @@
+import core.LatencyPoint;
+import core.LatencyPointAggregator;
+import core.LatencyPointsDistributor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

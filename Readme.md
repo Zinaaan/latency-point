@@ -5,7 +5,7 @@ High performance latency measurement harness, extremely low memory footprint and
 
 Design:
 
-1. LatencyPoint: Only one instance exist, so start and stop method should be static
+1. core.LatencyPoint: Only one instance exist, so start and stop method should be static
 2. How to initialize? Three types: COUNT, LATENCY, GUAGE
 3. How to store metrics, which data structures should we choose? 
     1. ConcurrentHashMap<Event, Metrics>?  We could because it's the easiest way, but it will have latency impact under time-and-latency-sensitive scenarios.

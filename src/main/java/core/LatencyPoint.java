@@ -1,3 +1,8 @@
+package core;
+
+import common.PointType;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import net.openhft.chronicle.bytes.Bytes;
 
 import java.time.Duration;
@@ -8,9 +13,12 @@ import java.time.Instant;
  * @date 2024/01/06 22:34
  * @description Measure the latency for events
  */
+@Data
+@Accessors(fluent = true)
 public class LatencyPoint {
 
     private Instant start;
+    private String threadName;
     private String blockName;
     private PointType type;
     private int count;
@@ -35,11 +43,7 @@ public class LatencyPoint {
     }
 
     public void stop(){
-        LatencyPointAggregator.INSTANCE.collect(collectMetrics(Duration.between(start, Instant.now()).getNano()));
-    }
-
-    private byte[] collectMetrics(long latency){
-        return metricBytes.clear().writeUtf8(Thread.currentThread().getName()).writeUtf8(blockName).writeInt(type.ordinal()).writeLong(latency).toByteArray();
+        LatencyPointAggregator.collect(metricBytes.clear().writeUtf8(Thread.currentThread().getName()).writeUtf8(blockName).writeInt(type.ordinal()).writeLong(Duration.between(start, Instant.now()).getNano()).toByteArray());
     }
 
     public LatencyPoint compute(long elapsedTime){
@@ -60,12 +64,11 @@ public class LatencyPoint {
     }
 
     public void clear(){
-        blockName = null;
-        type = null;
         max = 0L;
         min = 0L;
         mean = 0L;
         count = 0;
+        total = 0L;
     }
 
     public void increment(){
@@ -78,7 +81,7 @@ public class LatencyPoint {
 
     @Override
     public String toString() {
-        return "LatencyPoint{" +
+        return "core.LatencyPoint{" +
                 "event=" + blockName +
                 ", type=" + type +
                 ", count=" + count +

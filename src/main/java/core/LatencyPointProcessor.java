@@ -1,8 +1,9 @@
+package core;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * @author lzn
@@ -16,7 +17,7 @@ public class LatencyPointProcessor implements Runnable, Closeable {
     private boolean isRunning = true;
 
     @Override
-    public void close() throws IOException {
+    public void run() {
         try {
             while (isRunning){
                 sendMetrics();
@@ -26,6 +27,11 @@ public class LatencyPointProcessor implements Runnable, Closeable {
         }
     }
 
+    @Override
+    public void close() {
+        isRunning = false;
+    }
+
     private void sendMetrics() {
         if(!LatencyPointAggregator.INSTANCE.latencyMap.isEmpty()){
             LatencyPointAggregator.INSTANCE.startCollection();
@@ -33,10 +39,5 @@ public class LatencyPointProcessor implements Runnable, Closeable {
         }
 
         LatencyPointAggregator.INSTANCE.stopCollection();
-    }
-
-    @Override
-    public void run() {
-        isRunning = false;
     }
 }
