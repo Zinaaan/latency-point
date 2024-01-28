@@ -1,6 +1,5 @@
 import core.LatencyPoint;
-import core.LatencyPointAggregator;
-import core.LatencyPointsDistributor;
+import core.LatencyMetricMeter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,15 +14,15 @@ import java.util.concurrent.Executors;
  * @date 2024/01/06 22:34
  * @description Functional test for Latency point
  */
-class LatencyPointsDistributorTest {
+class LatencyMetricMeterTest {
 
     private final List<Integer> list = new CopyOnWriteArrayList<>();
 
     @Test
     void multiple_events_works_successful_for_single_thread() {
-        LatencyPoint e2e = LatencyPointsDistributor.latencyPoint("e2e");
-        LatencyPoint step1 = LatencyPointsDistributor.countPoint("step1");
-        LatencyPoint step2 = LatencyPointsDistributor.gaugePoint("step2");
+        LatencyPoint e2e = LatencyMetricMeter.latencyPoint("e2e");
+        LatencyPoint step1 = LatencyMetricMeter.countPoint("step1");
+        LatencyPoint step2 = LatencyMetricMeter.gaugePoint("step2");
         e2e.start();
 
         for (int i = 0; i < 100; i++) {
@@ -39,8 +38,7 @@ class LatencyPointsDistributorTest {
         }
 
         e2e.stop();
-        new Thread(LatencyPointAggregator.INSTANCE).start();
-        Assertions.assertEquals(3, LatencyPointsDistributor.getLatencyMap().size());
+        Assertions.assertEquals(3, LatencyMetricMeter.getLatencyMap().size());
     }
 
     @Test
@@ -50,9 +48,9 @@ class LatencyPointsDistributorTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
         for (int n = 0; n < threadCount; n++) {
             executorService.execute(() -> {
-                LatencyPoint e2e = LatencyPointsDistributor.latencyPoint("e2e");
-                LatencyPoint step1 = LatencyPointsDistributor.countPoint("step1");
-                LatencyPoint step2 = LatencyPointsDistributor.gaugePoint("step2");
+                LatencyPoint e2e = LatencyMetricMeter.latencyPoint("e2e");
+                LatencyPoint step1 = LatencyMetricMeter.countPoint("step1");
+                LatencyPoint step2 = LatencyMetricMeter.gaugePoint("step2");
                 e2e.start();
                 for (int i = 0; i < 100; i++) {
                     step1.start();
@@ -71,7 +69,7 @@ class LatencyPointsDistributorTest {
                 Assertions.assertNotNull(e2e);
                 Assertions.assertNotNull(step1);
                 Assertions.assertNotNull(step2);
-                Assertions.assertEquals(3, LatencyPointsDistributor.getLatencyMap().size());
+                Assertions.assertEquals(3, LatencyMetricMeter.getLatencyMap().size());
             });
         }
 

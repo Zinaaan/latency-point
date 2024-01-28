@@ -3,34 +3,37 @@ package core;
 import common.MetricBuffer;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.chronicle.core.Jvm;
-import org.agrona.collections.Object2ObjectHashMap;
 import org.agrona.concurrent.OneToOneConcurrentArrayQueue;
 
 import java.io.Closeable;
-import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author lzn
  * @date 2024/01/14 15:10
- * @description Collect and aggregate the latency points data
+ * @description Collect and report metrics
  */
 @Slf4j
-public class LatencyPointAggregator implements Runnable, Closeable {
+public class MetricManager implements Runnable, Closeable {
 
-    private static final OneToOneConcurrentArrayQueue<byte[]> QUEUE = new OneToOneConcurrentArrayQueue<>(Integer.parseInt(System.getProperty("latency.point.queue.size", "1024")));
+    public static final MetricManager INSTANCE = new MetricManager();
+    private static final OneToOneConcurrentArrayQueue<byte[]> QUEUE = new OneToOneConcurrentArrayQueue<>(Integer.parseInt(System.getProperty("latency.point.queue.size", "10240")));
     private volatile boolean isRunning = true;
     private boolean collectionInProgress = true;
     private final MetricBuffer buf = new MetricBuffer(40);
-    public static final LatencyPointAggregator INSTANCE = new LatencyPointAggregator();
-    public final Object2ObjectHashMap<MetricBuffer, LatencyPoint> latencyMap = new Object2ObjectHashMap<>();
-    private MetricsReporter reporter;
+    private final MetricsReporter reporter;
 
-    private LatencyPointAggregator() {
-
+    private MetricManager() {
+        reporter = MetricsReporterFactory.getReporter();
+        Executors.newSingleThreadScheduledExecutor().schedule(this, 5, TimeUnit.SECONDS);
+        log.info("Metric manager has been initialized");
     }
 
     public void addLatencyPoint(LatencyPoint point) {
-        latencyMap.put(new MetricBuffer().createKey(point.threadName(), point.blockName(), point.type()), point);
+        if (reporter instanceof RemoteMetricReporter) {
+            ((RemoteMetricReporter) reporter).getAggMetrics().put(new MetricBuffer().createKey(point.threadName(), point.blockName(), point.type()), point);
+        }
     }
 
     @Override
@@ -52,7 +55,7 @@ public class LatencyPointAggregator implements Runnable, Closeable {
     }
 
     private void aggregate(byte[] metrics) {
-        buf.wrapBytes(metrics);
+        reporter.report(buf.wrapBytes(metrics));
     }
 
     public void startCollection() {
@@ -61,7 +64,6 @@ public class LatencyPointAggregator implements Runnable, Closeable {
 
     public void stopCollection() {
         collectionInProgress = false;
-        latencyMap.values().forEach(LatencyPoint::clear);
     }
 
     public static void collect(byte[] points) {

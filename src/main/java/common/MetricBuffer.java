@@ -1,6 +1,7 @@
 package common;
 
 import org.agrona.DirectBuffer;
+import org.agrona.collections.ArrayUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
@@ -31,7 +32,7 @@ public class MetricBuffer extends UnsafeBuffer {
     private int latencyIdx = 1;
 
     public MetricBuffer() {
-        wrapBytes(new byte[]{});
+        wrap(ArrayUtil.EMPTY_BYTE_ARRAY);
     }
 
     public MetricBuffer(int initialCapacity) {
@@ -75,39 +76,54 @@ public class MetricBuffer extends UnsafeBuffer {
         return getStringUtf8(tnIdx, getLenOfThreadName());
     }
 
-    private int getLenOfThreadName() {
-        return getInt(0);
+    public int getLenOfThreadName() {
+        return getByte(0);
     }
 
     public String getBlockName(){
         return getStringUtf8(blIdx, getLenOfBlockName());
     }
 
-    private int getLenOfBlockName() {
-        return getInt(tnIdx + getLenOfThreadName());
+    public int getLenOfBlockName() {
+        return getByte(tnIdx + getLenOfThreadName());
     }
 
-    private PointType getType(){
+    public PointType getType(){
         return PointType.values()[getInt(pointIdx)];
     }
 
-    private long getLatency(){
+    public long getLatency(){
         return getLong(latencyIdx);
     }
 
+    /**
+     *
+     * @param threadName Name of current thread
+     * @param blockName Name of current block
+     * @param type Type of latency point
+     * @return Metric buffer with format: length of thread name + thread name + length of block name + block name + ordinal of type
+     */
     public MetricBuffer createKey(String threadName, String blockName, PointType type){
         int idx = 0;
-        wrap(ByteBuffer.allocate(2 + threadName.length() + blockName.length() + Integer.BYTES +  Long.BYTES));
-
+        this.wrap(ByteBuffer.allocate(2 + threadName.length() + blockName.length() + Integer.BYTES +  Long.BYTES));
+        putByte(idx++, (byte) threadName.length());
+        putStringWithoutLengthAscii(idx, threadName);
+        idx += threadName.length();
+        putByte(idx++, (byte) blockName.length());
+        putStringWithoutLengthAscii(idx, blockName);
+        idx += blockName.length();
+        putInt(idx, type.ordinal());
+        init();
         return this;
     }
 
     private void init(){
         tnIdx = 1;
-        blIdx = 1;
-        pointIdx = 1;
-        latencyIdx = 1;
+        blIdx = tnIdx + getLenOfThreadName();
+        pointIdx = blIdx + getLenOfBlockName() + 1;
+        latencyIdx = pointIdx + Integer.BYTES;
     }
+
     @Override
     public boolean equals(Object obj) {
         if(this == obj){

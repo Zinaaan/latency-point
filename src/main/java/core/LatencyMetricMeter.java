@@ -11,7 +11,7 @@ import java.util.Optional;
  * @date 2024/01/07 14:51
  * @description Global latency points distributor
  */
-public class LatencyPointsDistributor {
+public class LatencyMetricMeter {
 
     private static final ThreadLocal<Object2ObjectHashMap<String, LatencyPoint>> POINTS = ThreadLocal.withInitial(Object2ObjectHashMap::new);
 
@@ -30,9 +30,9 @@ public class LatencyPointsDistributor {
     private static LatencyPoint getOrInstantiate(String blockName, PointType type){
         Map<String, LatencyPoint> pointMap = POINTS.get();
         return Optional.ofNullable(pointMap.get(blockName)).orElseGet(() -> {
-            LatencyPoint point = new LatencyPoint(blockName, type);
+            LatencyPoint point = new LatencyPoint(Thread.currentThread().getName(), blockName, type);
             pointMap.put(blockName, point);
-            LatencyPointAggregator.INSTANCE.addLatencyPoint(point);
+            MetricManager.INSTANCE.addLatencyPoint(point);
             return point;
         });
     }
