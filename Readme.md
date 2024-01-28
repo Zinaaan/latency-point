@@ -1,7 +1,7 @@
 Latency point
 --------------------------
 
-Zero GC, ultra-low latency and very easy to use latency detection and monitoring tool that automatically detects the current container type (springboot or regular java project) and collects and calculates the latency, supports Prometheus access and integration into the Grafana dashboard.
+Zero GC, ultra-low latency and very easy to use latency detection and monitoring tool that automatically detects the current container type (springboot or regular java project) and collects and calculates the latency, supports Prometheus access and visualize on Grafana dashboard.
 
 Design:
 
