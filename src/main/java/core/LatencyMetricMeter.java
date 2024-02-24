@@ -1,6 +1,5 @@
 package core;
 
-import common.PointType;
 import org.agrona.collections.Object2ObjectHashMap;
 
 import java.util.Map;
@@ -13,31 +12,22 @@ import java.util.Optional;
  */
 public class LatencyMetricMeter {
 
-    private static final ThreadLocal<Object2ObjectHashMap<String, LatencyPoint>> POINTS = ThreadLocal.withInitial(Object2ObjectHashMap::new);
+    private static final ThreadLocal<Object2ObjectHashMap<String, TracePoint>> POINTS = ThreadLocal.withInitial(Object2ObjectHashMap::new);
 
-    public static LatencyPoint latencyPoint(String blockName){
-        return getOrInstantiate(blockName, PointType.LATENCY);
+    public static TracePoint tracePoint(String blockName) {
+        return getOrInstantiate(blockName, "reqId");
     }
 
-    public static LatencyPoint countPoint(String blockName){
-        return getOrInstantiate(blockName, PointType.COUNT);
-    }
-
-    public static LatencyPoint gaugePoint(String blockName){
-        return getOrInstantiate(blockName, PointType.GAUGE);
-    }
-
-    private static LatencyPoint getOrInstantiate(String blockName, PointType type){
-        Map<String, LatencyPoint> pointMap = POINTS.get();
+    private static TracePoint getOrInstantiate(String blockName, String reqId) {
+        Map<String, TracePoint> pointMap = POINTS.get();
         return Optional.ofNullable(pointMap.get(blockName)).orElseGet(() -> {
-            LatencyPoint point = new LatencyPoint(Thread.currentThread().getName(), blockName, type);
+            TracePoint point = new TracePoint(blockName, reqId, "-1");
             pointMap.put(blockName, point);
-            MetricManager.INSTANCE.addLatencyPoint(point);
             return point;
         });
     }
 
-    public static Map<String, LatencyPoint> getLatencyMap(){
+    public static Map<String, TracePoint> getLatencyMap() {
         return POINTS.get();
     }
 }

@@ -1,6 +1,6 @@
 package core;
 
-import common.MetricBuffer;
+import common.TraceBuffer;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.chronicle.core.Jvm;
 import org.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -20,8 +20,8 @@ public class MetricManager implements Runnable, Closeable {
     public static final MetricManager INSTANCE = new MetricManager();
     private static final OneToOneConcurrentArrayQueue<byte[]> QUEUE = new OneToOneConcurrentArrayQueue<>(Integer.parseInt(System.getProperty("latency.point.queue.size", "10240")));
     private volatile boolean isRunning = true;
-    private boolean collectionInProgress = true;
-    private final MetricBuffer buf = new MetricBuffer(40);
+    private boolean reportInProgress = false;
+    private final TraceBuffer buf = new TraceBuffer(40);
     private final MetricsReporter reporter;
 
     private MetricManager() {
@@ -30,16 +30,10 @@ public class MetricManager implements Runnable, Closeable {
         log.info("Metric manager has been initialized");
     }
 
-    public void addLatencyPoint(LatencyPoint point) {
-        if (reporter instanceof RemoteMetricReporter) {
-            ((RemoteMetricReporter) reporter).getAggMetrics().put(new MetricBuffer().createKey(point.threadName(), point.blockName(), point.type()), point);
-        }
-    }
-
     @Override
     public void run() {
         while (isRunning) {
-            if (!collectionInProgress || QUEUE.isEmpty()) {
+            if (reportInProgress || QUEUE.isEmpty()) {
                 Jvm.pause(1000);
                 continue;
             }
@@ -55,15 +49,17 @@ public class MetricManager implements Runnable, Closeable {
     }
 
     private void aggregate(byte[] metrics) {
-        reporter.report(buf.wrapBytes(metrics));
+        buf.putByte(0, (byte) metrics.length);
+        buf.putBytes(1, metrics);
+        reporter.report(buf);
     }
 
-    public void startCollection() {
-        collectionInProgress = true;
+    public void startReporting() {
+        reportInProgress = true;
     }
 
-    public void stopCollection() {
-        collectionInProgress = false;
+    public void stopReporting() {
+        reportInProgress = false;
     }
 
     public static void collect(byte[] points) {

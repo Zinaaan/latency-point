@@ -1,14 +1,11 @@
 package core;
 
-import common.MetricBuffer;
-import common.PointType;
+import common.TraceBuffer;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -24,12 +21,9 @@ public class RemoteMetricReporter implements MetricsReporter, Runnable, Closeabl
 
     private boolean isRunning = true;
 
-    private final MetricDataWrapper metricDataWrapper;
-
-    private final Map<MetricBuffer, LatencyPoint> aggMetrics = new ConcurrentHashMap<>();
+//    private final MetricDataWrapper metricDataWrapper;
 
     public RemoteMetricReporter() {
-        this.metricDataWrapper = new MetricDataWrapper(LatencyPointContext.INSTANCE.getClientInfo(), aggMetrics);
         Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this, 10, Long.parseLong(System.getProperty("metric.report.remote.period", "10")), TimeUnit.SECONDS);
         log.info("Remote Metric Reporter has been initialized");
     }
@@ -51,25 +45,25 @@ public class RemoteMetricReporter implements MetricsReporter, Runnable, Closeabl
     }
 
     private void sendMetrics() {
-        if (!aggMetrics.isEmpty()) {
-            MetricManager.INSTANCE.startCollection();
-            // Send metrics to the endpoint
+        MetricManager.INSTANCE.startReporting();
+        // Send metrics to the endpoint
 //            remoteConnector.reportMetrics(metricDataWrapper.setReportTime(System.currentTimeMillis()));
-        }
-
-        MetricManager.INSTANCE.stopCollection();
-        aggMetrics.values().forEach(LatencyPoint::clear);
+//        }
+        MetricManager.INSTANCE.stopReporting();
     }
 
     @Override
-    public void report(MetricBuffer buf) {
-        LatencyPoint point = aggMetrics.get(buf);
-        if (point.type() == PointType.LATENCY) {
-            point.compute(buf.getLatency());
+    public void report(TraceBuffer buf) {
+        // Skip first byte
+        buf.setLength(1);
+        int offset = 1, len = buf.getByte(0);
+        while (offset < len) {
+            String requestId = buf.getRequestId();
+            String blockName = buf.getBlockName();
+            String parentName = buf.getParentName();
+            long latency = buf.getLatency();
+            log.info("Request id: {}, block name: {}, parent: {}, latency: {}", requestId, blockName, parentName, latency);
+            offset = buf.getLength();
         }
-    }
-
-    public Map<MetricBuffer, LatencyPoint> getAggMetrics() {
-        return aggMetrics;
     }
 }

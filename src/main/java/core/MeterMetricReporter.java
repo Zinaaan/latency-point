@@ -1,6 +1,6 @@
 package core;
 
-import common.MetricBuffer;
+import common.TraceBuffer;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.stereotype.Component;
@@ -21,7 +21,7 @@ public class MeterMetricReporter implements MetricsReporter {
     }
 
     @Override
-    public void report(MetricBuffer buf) {
+    public void report(TraceBuffer buf) {
 
     }
 }

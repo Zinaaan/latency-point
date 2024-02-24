@@ -1,4 +1,4 @@
-import core.LatencyPoint;
+import core.TracePoint;
 import core.LatencyMetricMeter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,25 +20,26 @@ class LatencyMetricMeterTest {
 
     @Test
     void multiple_events_works_successful_for_single_thread() {
-        LatencyPoint e2e = LatencyMetricMeter.latencyPoint("e2e");
-        LatencyPoint step1 = LatencyMetricMeter.countPoint("step1");
-        LatencyPoint step2 = LatencyMetricMeter.gaugePoint("step2");
+        TracePoint e2e = LatencyMetricMeter.tracePoint("e2e");
+        TracePoint child1 = e2e.createChild("child1");
+        TracePoint child2 = e2e.createChild("child2");
         e2e.start();
 
         for (int i = 0; i < 100; i++) {
-            step1.start();
+            child1.start();
             list.add(i);
-            step1.stop();
+            child1.stop();
         }
 
         for (int i = 0; i < 50; i++) {
-            step2.start();
+            child2.start();
             list.add(i);
-            step2.stop();
+            child2.stop();
         }
 
         e2e.stop();
-        Assertions.assertEquals(3, LatencyMetricMeter.getLatencyMap().size());
+        Assertions.assertEquals(1, LatencyMetricMeter.getLatencyMap().size());
+        Assertions.assertTrue(e2e.hasChild());
     }
 
     @Test
@@ -48,28 +49,29 @@ class LatencyMetricMeterTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
         for (int n = 0; n < threadCount; n++) {
             executorService.execute(() -> {
-                LatencyPoint e2e = LatencyMetricMeter.latencyPoint("e2e");
-                LatencyPoint step1 = LatencyMetricMeter.countPoint("step1");
-                LatencyPoint step2 = LatencyMetricMeter.gaugePoint("step2");
+                TracePoint e2e = LatencyMetricMeter.tracePoint("e2e");
+                TracePoint child1 = e2e.createChild("child1");
+                TracePoint child2 = e2e.createChild("child2");
                 e2e.start();
                 for (int i = 0; i < 100; i++) {
-                    step1.start();
+                    child1.start();
                     list.add(i);
-                    step1.stop();
+                    child1.stop();
                 }
 
                 for (int i = 0; i < 50; i++) {
-                    step2.start();
+                    child2.start();
                     list.add(i);
-                    step2.stop();
+                    child2.stop();
                 }
 
                 e2e.stop();
                 latch.countDown();
                 Assertions.assertNotNull(e2e);
-                Assertions.assertNotNull(step1);
-                Assertions.assertNotNull(step2);
-                Assertions.assertEquals(3, LatencyMetricMeter.getLatencyMap().size());
+                Assertions.assertNotNull(child1);
+                Assertions.assertNotNull(child2);
+                Assertions.assertTrue(e2e.hasChild());
+                Assertions.assertEquals(1, LatencyMetricMeter.getLatencyMap().size());
             });
         }
 

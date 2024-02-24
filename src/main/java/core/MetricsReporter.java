@@ -1,6 +1,6 @@
 package core;
 
-import common.MetricBuffer;
+import common.TraceBuffer;
 
 /**
  * @author lzn
@@ -14,5 +14,5 @@ public interface MetricsReporter {
      *
      * @param buf Metrics data in bytes
      */
-    void report(MetricBuffer buf);
+    void report(TraceBuffer buf);
 }
